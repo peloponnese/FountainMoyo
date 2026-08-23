@@ -24,8 +24,11 @@ struct WaterSettings
 struct LedSettings
 {
     bool enabled;
-    byte brightness;
+    bool loopMode;
     byte rate;
+    byte hue;
+    byte saturation;
+    byte value;
 };
 
 

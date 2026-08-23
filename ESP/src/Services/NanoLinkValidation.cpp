@@ -1,0 +1,159 @@
+#include "Services/NanoLinkValidation.h"
+
+bool validateEnvironment(
+    JsonDocument& message,
+    float& temperature,
+    float& humidity,
+    bool& valid)
+{
+    if (!message["valid"].is<bool>())
+        return false;
+
+    valid = message["valid"].as<bool>();
+
+    if (!valid)
+        return true;
+
+    if ((!message["temperature"].is<float>() &&
+         !message["temperature"].is<int>()) ||
+        (!message["humidity"].is<float>() &&
+         !message["humidity"].is<int>()))
+    {
+        return false;
+    }
+
+    temperature = message["temperature"].as<float>();
+    humidity = message["humidity"].as<float>();
+
+    return true;
+}
+
+bool validateControl(
+    JsonDocument& message,
+    bool& pump,
+    bool& watering,
+    bool& refill,
+    bool& empty,
+    bool& dayNight)
+{
+    if (!message["pump"].is<bool>() ||
+        !message["watering"].is<bool>() ||
+        !message["refill"].is<bool>() ||
+        !message["empty"].is<bool>() ||
+        !message["dayNight"].is<bool>())
+    {
+        return false;
+    }
+
+    pump = message["pump"].as<bool>();
+    watering = message["watering"].as<bool>();
+    refill = message["refill"].as<bool>();
+    empty = message["empty"].as<bool>();
+    dayNight = message["dayNight"].as<bool>();
+
+    return true;
+}
+
+bool validateLights(
+    JsonDocument& message,
+    bool& loop,
+    uint8_t& hue,
+    uint8_t& saturation,
+    uint8_t& value)
+{
+    if (!message["loop"].is<bool>())
+        return false;
+
+    loop = message["loop"].as<bool>();
+
+    if (loop)
+        return true;
+
+    if (!message["H"].is<int>() ||
+        !message["S"].is<int>() ||
+        !message["V"].is<int>())
+    {
+        return false;
+    }
+
+    hue = message["H"].as<int>();
+    saturation = message["S"].as<int>();
+    value = message["V"].as<int>();
+
+    return true;
+}
+
+bool validatePumpSettings(
+    JsonDocument& message,
+    uint16_t& dayPeriod,
+    uint8_t& dayRuntime,
+    uint16_t& nightPeriod,
+    uint8_t& nightRuntime)
+{
+    if (!message["dayPeriod"].is<int>() ||
+        !message["dayRuntime"].is<int>() ||
+        !message["nightPeriod"].is<int>() ||
+        !message["nightRuntime"].is<int>())
+    {
+        return false;
+    }
+
+    dayPeriod = message["dayPeriod"].as<int>();
+    dayRuntime = message["dayRuntime"].as<int>();
+    nightPeriod = message["nightPeriod"].as<int>();
+    nightRuntime = message["nightRuntime"].as<int>();
+
+    return true;
+}
+
+bool validateWateringSettings(
+    JsonDocument& message,
+    uint8_t& hour,
+    uint8_t& minute,
+    uint8_t& periodDays,
+    uint8_t& runtime)
+{
+    if (!message["hour"].is<int>() ||
+        !message["minute"].is<int>() ||
+        !message["periodDays"].is<int>() ||
+        !message["runtime"].is<int>())
+    {
+        return false;
+    }
+
+    hour = message["hour"].as<int>();
+    minute = message["minute"].as<int>();
+    periodDays = message["periodDays"].as<int>();
+    runtime = message["runtime"].as<int>();
+
+    return true;
+}
+
+bool validateLightsSettings(
+    JsonDocument& message,
+    bool& enabled,
+    bool& loop,
+    uint8_t& rate,
+    uint8_t& hue,
+    uint8_t& saturation,
+    uint8_t& value)
+{
+    if (!message["enabled"].is<bool>() ||
+        !message["loop"].is<bool>() ||
+        !message["rate"].is<int>() ||
+        !message["H"].is<int>() ||
+        !message["S"].is<int>() ||
+        !message["V"].is<int>())
+    {
+        return false;
+    }
+
+    enabled = message["enabled"].as<bool>();
+    loop = message["loop"].as<bool>();
+    rate = message["rate"].as<int>();
+    hue = message["H"].as<int>();
+    saturation = message["S"].as<int>();
+    value = message["V"].as<int>();
+
+    return true;
+}

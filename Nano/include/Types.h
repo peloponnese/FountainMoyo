@@ -11,10 +11,10 @@ enum State : byte
     MANUAL
 };
 
-enum DayState : byte
+enum DayState : bool
 {
-    DAY = 0,
-    NIGHT
+    NIGHT = false,
+    DAY = true
 };
 
 #endif

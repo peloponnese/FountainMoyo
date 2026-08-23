@@ -4,7 +4,8 @@
 
 static char rxBuffer[COMMS_BUFFER_SIZE];
 static uint16_t rxIndex = 0;
-static bool messageReady = false;
+
+static bool messageReady;
 
 static JsonDocument messageDocument;
 
@@ -85,10 +86,7 @@ static void processMessage()
         return;
     }
 
-    Serial.println("ESP JSON OK");
-
     messageReady = true;
-
     clearBuffer();
 }
 
@@ -115,6 +113,19 @@ bool commsHasMessage()
 JsonDocument& commsGetMessage()
 {
     return messageDocument;
+}
+
+// --------------------------------------------------
+// Send ACK
+// --------------------------------------------------
+void commsSendAck(uint16_t id)
+{
+    JsonDocument document;
+
+    document["id"] = id;
+    document["cmd"] = "ack";
+
+    commsSend(document);
 }
 
 // --------------------------------------------------

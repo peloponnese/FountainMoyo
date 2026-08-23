@@ -34,9 +34,4 @@ static void handleCommand()
 
     const char* command = message["cmd"];
 
-    if (strcmp(command, "get_environment") == 0)
-    {
-        nanoRequestEnvironment();
-        return;
-    }
 }

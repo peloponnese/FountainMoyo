@@ -19,7 +19,6 @@ void setup()
 void loop()
 {
     commsUpdate();
-
-    commandHandlerUpdate();
     nanoLinkUpdate();
+    commandHandlerUpdate();
 }

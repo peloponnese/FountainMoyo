@@ -24,12 +24,4 @@ void commsClearMessage();
 
 void commsSendJson(JsonDocument& document);
 
-void commsDebugJson(JsonDocument& document);
-
-void commsSendOk(uint16_t id);
-
-void commsSendCommError();
-
-void commsSendUnknownCommand(uint16_t id);
-
 #endif

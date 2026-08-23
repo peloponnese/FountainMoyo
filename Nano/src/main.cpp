@@ -23,12 +23,10 @@
 
 void setup() {
     Serial.begin(SERIAL_BAUD_RATE);
-    Serial.println("Nano started");
 
     outputsBegin();
     inputsBegin();
-
-    settingsBegin();    // Load factory defaults
+    
     eepromLoad();       // Replace with saved settings if available
 
     schedulerBegin();
@@ -42,6 +40,8 @@ void setup() {
 
     commsBegin();
     commandHandlerBegin();
+
+    Serial.println("NANO READY");
 }
 
 void loop() {

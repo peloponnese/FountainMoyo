@@ -65,7 +65,6 @@ void commsUpdate()
         if (rxIndex >= COMMS_BUFFER_SIZE - 1)
         {
             clearBuffer();
-            commsSendCommError();
             continue;
         }
 
@@ -79,7 +78,6 @@ void commsUpdate()
 // --------------------------------------------------
 // Process message
 // --------------------------------------------------
-
 static void processMessage()
 {
     if (rxIndex == 0)
@@ -88,54 +86,43 @@ static void processMessage()
         return;
     }
 
-    messageDocument.clear();
-
+    Serial.print("NANO RX: ");
     Serial.println(rxBuffer);
 
-    // --------------------------------------------------
-    // Parse JSON
-    // --------------------------------------------------
+    // Ignore ESP debug messages
+    if (strncmp(rxBuffer, "ESP", 3) == 0)
+    {
+        clearBuffer();
+        return;
+    }
+
+    messageDocument.clear();
 
     DeserializationError error = deserializeJson(messageDocument, rxBuffer);
 
     if (error)
     {
-        Serial.println("Failed to parse JSON");
-
-        commsSendCommError();
         clearBuffer();
-
         return;
     }
 
-    // --------------------------------------------------
-    // ID
-    // --------------------------------------------------
-
+    // ID is mandatory
     if (!messageDocument["id"].is<uint16_t>())
     {
-        commsSendCommError();
         clearBuffer();
-
         return;
     }
 
     messageId = messageDocument["id"].as<uint16_t>();
 
-    // --------------------------------------------------
-    // Command
-    // --------------------------------------------------
-
+    // Command is mandatory
     if (!messageDocument["cmd"].is<const char*>())
     {
-        commsSendCommError();
         clearBuffer();
-
         return;
     }
 
-    const char* receivedCommand =
-        messageDocument["cmd"].as<const char*>();
+    const char* receivedCommand = messageDocument["cmd"].as<const char*>();
 
     strncpy(
         command,
@@ -145,15 +132,7 @@ static void processMessage()
 
     command[COMMS_COMMAND_SIZE - 1] = '\0';
 
-    // --------------------------------------------------
-    // Remove protocol field
-    // --------------------------------------------------
-
     messageDocument.remove("crc");
-
-    // --------------------------------------------------
-    // Message ready
-    // --------------------------------------------------
 
     messageReady = true;
 
@@ -163,7 +142,6 @@ static void processMessage()
 // --------------------------------------------------
 // Clear receive buffer
 // --------------------------------------------------
-
 static void clearBuffer()
 {
     rxIndex = 0;
@@ -173,7 +151,6 @@ static void clearBuffer()
 // --------------------------------------------------
 // Clear message
 // --------------------------------------------------
-
 void commsClearMessage()
 {
     command[0] = '\0';
@@ -184,7 +161,6 @@ void commsClearMessage()
 // --------------------------------------------------
 // Message status
 // --------------------------------------------------
-
 bool commsHasMessage()
 {
     return messageReady;
@@ -193,7 +169,6 @@ bool commsHasMessage()
 // --------------------------------------------------
 // Get command
 // --------------------------------------------------
-
 const char* commsGetCommand()
 {
     return command;
@@ -202,7 +177,6 @@ const char* commsGetCommand()
 // --------------------------------------------------
 // Get ID
 // --------------------------------------------------
-
 uint16_t commsGetId()
 {
     return messageId;
@@ -211,7 +185,6 @@ uint16_t commsGetId()
 // --------------------------------------------------
 // Get integer
 // --------------------------------------------------
-
 bool commsGetInt(const char* key, int& value)
 {
     if (!messageDocument[key].is<int>())
@@ -225,7 +198,6 @@ bool commsGetInt(const char* key, int& value)
 // --------------------------------------------------
 // Get byte
 // --------------------------------------------------
-
 bool commsGetByte(const char* key, byte& value)
 {
     if (!messageDocument[key].is<int>())
@@ -244,7 +216,6 @@ bool commsGetByte(const char* key, byte& value)
 // --------------------------------------------------
 // Get bool
 // --------------------------------------------------
-
 bool commsGetBool(const char* key, bool& value)
 {
     if (!messageDocument[key].is<bool>())
@@ -258,63 +229,12 @@ bool commsGetBool(const char* key, bool& value)
 // --------------------------------------------------
 // Send JSON
 // --------------------------------------------------
-
 void commsSendJson(JsonDocument& document)
 {
+    Serial.print("NANO TX: ");
+    serializeJson(document, Serial);
+    Serial.println();
+
     serializeJson(document, espSerial);
     espSerial.write('\n');
-}
-
-// --------------------------------------------------
-// Debug JSON
-// --------------------------------------------------
-
-void commsDebugJson(JsonDocument& document)
-{
-    Serial.println("Sending JSON:");
-
-    serializeJson(document, Serial);
-
-    Serial.println();
-}
-
-// --------------------------------------------------
-// Send OK
-// --------------------------------------------------
-
-void commsSendOk(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "ok";
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// Communication error
-// --------------------------------------------------
-
-void commsSendCommError()
-{
-    JsonDocument document;
-
-    document["cmd"] = "comm_error";
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// Unknown command
-// --------------------------------------------------
-
-void commsSendUnknownCommand(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "unknown_command";
-
-    commsSendJson(document);
 }

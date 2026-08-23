@@ -19,8 +19,11 @@ void settingsBegin()
     settings.water.runTime = 10; // minutes
 
     settings.led.enabled = true;
-    settings.led.brightness = 255;
+    settings.led.loopMode = true;
     settings.led.rate = 10;
+    settings.led.hue = 255;
+    settings.led.saturation = 255;
+    settings.led.value = 255;
 
     settingsValidate();
 }

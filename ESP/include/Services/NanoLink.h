@@ -1,10 +1,7 @@
-#ifndef NANO_LINK_H
-#define NANO_LINK_H
+#ifndef NANOLINK_H
+#define NANOLINK_H
 
 void nanoLinkBegin();
-
 void nanoLinkUpdate();
-
-void nanoRequestEnvironment();
 
 #endif
