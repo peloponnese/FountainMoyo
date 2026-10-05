@@ -3,11 +3,15 @@
 #include "Config.h"
 
 static char rxBuffer[COMMS_BUFFER_SIZE];
-static uint16_t rxIndex = 0;
+static uint16_t rxIndex;
 
 static bool messageReady;
 
 static JsonDocument messageDocument;
+
+// --------------------------------------------------
+// Internal functions
+// --------------------------------------------------
 
 static void processMessage();
 static void clearBuffer();
@@ -15,6 +19,7 @@ static void clearBuffer();
 // --------------------------------------------------
 // Begin
 // --------------------------------------------------
+
 void commsBegin()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -28,24 +33,22 @@ void commsBegin()
 // --------------------------------------------------
 // Update
 // --------------------------------------------------
+
 void commsUpdate()
 {
     while (Serial.available())
     {
         char c = Serial.read();
 
-        // End of message
         if (c == '\n')
         {
             processMessage();
             continue;
         }
 
-        // Ignore carriage return
         if (c == '\r')
             continue;
 
-        // Buffer overflow
         if (rxIndex >= COMMS_BUFFER_SIZE - 1)
         {
             clearBuffer();
@@ -62,6 +65,7 @@ void commsUpdate()
 // --------------------------------------------------
 // Process message
 // --------------------------------------------------
+
 static void processMessage()
 {
     if (rxIndex == 0)
@@ -87,12 +91,14 @@ static void processMessage()
     }
 
     messageReady = true;
+    
     clearBuffer();
 }
 
 // --------------------------------------------------
 // Clear RX buffer
 // --------------------------------------------------
+
 static void clearBuffer()
 {
     rxIndex = 0;
@@ -100,8 +106,19 @@ static void clearBuffer()
 }
 
 // --------------------------------------------------
+// Clear message
+// --------------------------------------------------
+
+void commsClearMessage()
+{
+    messageDocument.clear();
+    messageReady = false;
+}
+
+// --------------------------------------------------
 // Message status
 // --------------------------------------------------
+
 bool commsHasMessage()
 {
     return messageReady;
@@ -110,36 +127,16 @@ bool commsHasMessage()
 // --------------------------------------------------
 // Get message
 // --------------------------------------------------
+
 JsonDocument& commsGetMessage()
 {
     return messageDocument;
 }
 
 // --------------------------------------------------
-// Send ACK
-// --------------------------------------------------
-void commsSendAck(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "ack";
-
-    commsSend(document);
-}
-
-// --------------------------------------------------
-// Clear message
-// --------------------------------------------------
-void commsClearMessage()
-{
-    messageDocument.clear();
-    messageReady = false;
-}
-
-// --------------------------------------------------
 // Send JSON
 // --------------------------------------------------
+
 void commsSend(JsonDocument& document)
 {
     serializeJson(document, Serial);

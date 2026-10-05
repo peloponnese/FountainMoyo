@@ -5,25 +5,15 @@
 
 #include "Config.h"
 
-#include "Services/Comms.h"
-#include "Services/Settings.h"
-
-#include "Sensors/Environment.h"
-#include "Sensors/DayNight.h"
+#include "Types.h"
 
 #include "Control/Pump.h"
 #include "Control/Watering.h"
-#include "Control/Refill.h"
 
-#include "IO/LEDStrip.h"
-
-static void sendSettingsPump(uint16_t id);
-static void sendSettingsWatering(uint16_t id);
-static void sendSettingsLights(uint16_t id);
-
-static void sendEnvironment(uint16_t id);
-static void sendControl(uint16_t id);
-static void sendLights(uint16_t id);
+#include "Services/Comms.h"
+#include "Services/CommandValidation.h"
+#include "Services/CommandLoader.h"
+#include "Services/Settings.h"
 
 enum StateResponse
 {
@@ -32,17 +22,23 @@ enum StateResponse
     // GET_STATE
     STATE_WAIT_ENV_ACK,
     STATE_WAIT_CONTROL_ACK,
-    STATE_WAIT_LIGHTS_ACK,
+    STATE_WAIT_LEDS_ACK,
 
     // GET_SETTINGS
     STATE_WAIT_SETTINGS_PUMP_ACK,
     STATE_WAIT_SETTINGS_WATERING_ACK,
-    STATE_WAIT_SETTINGS_LIGHTS_ACK
+    STATE_WAIT_SETTINGS_LEDS_ACK
 };
 
-static StateResponse stateResponse = STATE_IDLE;
-static uint16_t stateId = 0;
-static unsigned long responseTime = 0;
+static StateResponse stateResponse; // Current state of the response transaction
+static uint16_t stateId; // Current transaction ID (used to match ACKs to the correct transaction)
+static unsigned long responseTime; // Time when the last response was received
+
+// --------------------------------------------------
+// Internal functions
+// --------------------------------------------------
+
+static void processEspMessage();
 
 // --------------------------------------------------
 // Begin
@@ -50,6 +46,9 @@ static unsigned long responseTime = 0;
 
 void commandHandlerBegin()
 {
+    stateResponse = STATE_IDLE;
+    stateId = 0;
+    responseTime = 0;
 }
 
 // --------------------------------------------------
@@ -58,12 +57,19 @@ void commandHandlerBegin()
 
 void commandHandlerUpdate()
 {
+    if (commsHasMessage())
+    {
+        processEspMessage();
+        commsClearMessage();
+    }
+
+    const unsigned long now = millis();
+
     // --------------------------------------------------
     // Transaction timeout
     // --------------------------------------------------
 
-    if (stateResponse != STATE_IDLE &&
-        millis() - responseTime >= COMMS_TIMEOUT_MS)
+    if (stateResponse != STATE_IDLE && now - responseTime >= COMMS_TIMEOUT_MS)
     {
         Serial.print("NANO: TRANSACTION TIMEOUT, state=");
         Serial.println((int)stateResponse);
@@ -74,12 +80,24 @@ void commandHandlerUpdate()
 
         return;
     }
+}
 
-    if (!commsHasMessage())
+// --------------------------------------------------
+// Process ESP message
+// --------------------------------------------------
+
+static void processEspMessage()
+{
+    JsonDocument& message = commsGetMessage();
+
+    if (!message["id"].is<uint16_t>())
         return;
 
-    const char* command = commsGetCommand();
-    const uint16_t id = commsGetId();
+    if (!message["cmd"].is<const char*>())
+        return;
+
+    const uint16_t id = message["id"].as<uint16_t>();
+    const char* command = message["cmd"];
 
     // ==================================================
     // GET STATE
@@ -93,9 +111,9 @@ void commandHandlerUpdate()
 
         if (stateResponse != STATE_IDLE && id != stateId)
         {
-            stateResponse = STATE_IDLE;
             stateId = 0;
             responseTime = 0;
+            stateResponse = STATE_IDLE;
         }
 
         // --------------------------------------------------
@@ -105,10 +123,10 @@ void commandHandlerUpdate()
         if (stateResponse == STATE_IDLE)
         {
             stateId = id;
-            stateResponse = STATE_WAIT_ENV_ACK;
-            responseTime = millis();
+            loadCommandEnvironment(id);
 
-            sendEnvironment(id);
+            responseTime = millis();
+            stateResponse = STATE_WAIT_ENV_ACK;
         }
 
         // --------------------------------------------------
@@ -117,20 +135,20 @@ void commandHandlerUpdate()
 
         else if (id == stateId)
         {
-            responseTime = millis();
-
             if (stateResponse == STATE_WAIT_ENV_ACK)
             {
-                sendEnvironment(id);
+                loadCommandEnvironment(id);
             }
             else if (stateResponse == STATE_WAIT_CONTROL_ACK)
             {
-                sendControl(id);
+                loadCommandControl(id);
             }
-            else if (stateResponse == STATE_WAIT_LIGHTS_ACK)
+            else if (stateResponse == STATE_WAIT_LEDS_ACK)
             {
-                sendLights(id);
+                loadCommandLeds(id);
             }
+
+            responseTime = millis();
         }
     }
 
@@ -161,7 +179,7 @@ void commandHandlerUpdate()
             stateResponse = STATE_WAIT_SETTINGS_PUMP_ACK;
             responseTime = millis();
 
-            sendSettingsPump(id);
+            loadCommandSettingsPump(id);
         }
 
         // --------------------------------------------------
@@ -174,15 +192,203 @@ void commandHandlerUpdate()
 
             if (stateResponse == STATE_WAIT_SETTINGS_PUMP_ACK)
             {
-                sendSettingsPump(id);
+                loadCommandSettingsPump(id);
             }
             else if (stateResponse == STATE_WAIT_SETTINGS_WATERING_ACK)
             {
-                sendSettingsWatering(id);
+                loadCommandSettingsWatering(id);
             }
-            else if (stateResponse == STATE_WAIT_SETTINGS_LIGHTS_ACK)
+            else if (stateResponse == STATE_WAIT_SETTINGS_LEDS_ACK)
             {
-                sendSettingsLights(id);
+                loadCommandSettingsLeds(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET SETTINGS PUMP
+    // ==================================================
+
+    else if (strcmp(command, "set_settings_pump") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            uint16_t dayPeriod;
+            uint8_t dayRuntime;
+            uint16_t nightPeriod;
+            uint8_t nightRuntime;
+
+            if (validatePumpSettings(
+                    message,
+                    dayPeriod,
+                    dayRuntime,
+                    nightPeriod,
+                    nightRuntime))
+            {
+                settings.pump.dayPeriod = dayPeriod;
+                settings.pump.dayRunTime = dayRuntime;
+                settings.pump.nightPeriod = nightPeriod;
+                settings.pump.nightRunTime = nightRuntime;
+                settingsValidate();
+
+                loadCommandAck(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET SETTINGS WATERING
+    // ==================================================
+
+    else if (strcmp(command, "set_settings_watering") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            uint8_t hour;
+            uint8_t minute;
+            uint8_t periodDays;
+            uint8_t runTime;
+
+            if (validateWateringSettings(
+                    message,
+                    hour,
+                    minute,
+                    periodDays,
+                    runTime))
+            {
+                settings.water.hour = hour;
+                settings.water.minute = minute;
+                settings.water.periodDays = periodDays;
+                settings.water.runTime = runTime;
+                settingsValidate();
+
+                loadCommandAck(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET SETTINGS LEDS
+    // ==================================================
+
+    else if (strcmp(command, "set_settings_leds") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            bool enabled;
+            bool loopMode;
+            uint8_t rate;
+            uint8_t hue;
+            uint8_t saturation;
+            uint8_t value;
+            
+            if (validateLedsSettings(
+                message,
+                enabled,
+                loopMode,
+                rate,
+                hue,
+                saturation,
+                value
+            ))
+            {
+                settings.leds.enabled = enabled;
+                settings.leds.loopMode = loopMode;
+                settings.leds.rate = rate;
+                settings.leds.hue = hue;
+                settings.leds.saturation = saturation;
+                settings.leds.value = value;
+                settingsValidate();
+
+                loadCommandAck(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET PUMP
+    // ==================================================
+
+    else if (strcmp(command, "set_pump") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            bool manualOperation;
+
+            if (validateSetPump(
+                message,
+                manualOperation
+            ))
+            {   
+                State pumpState = pumpGetState();
+                // set MANUAL for dayRuntime/nightRuntime
+                if (manualOperation && pumpState == OFF)
+                {
+                    pumpSetRunningExternal();
+                }
+                else if (!manualOperation && (pumpState == MANUAL || pumpState == RUNNING))
+                {
+                    pumpSetOffExternal();
+                }
+
+                loadCommandAck(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET WATERING
+    // ==================================================
+
+    else if (strcmp(command, "set_watering") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            bool manualOperation;
+
+            if (validateSetWatering(
+                message,
+                manualOperation
+            ))
+            {   
+                State wateringState = wateringGetState();
+                // set MANUAL for runTime
+                if (manualOperation && wateringState == OFF)
+                {
+                    wateringSetRunningExternal();
+                }
+                else if (!manualOperation && (wateringState == MANUAL || wateringState == RUNNING))
+                {
+                    wateringSetOffExternal();
+                }
+
+                loadCommandAck(id);
+            }
+        }
+    }
+
+    // ==================================================
+    // SET LEDS
+    // ==================================================
+
+    else if (strcmp(command, "set_leds") == 0)
+    {
+        if (stateResponse == STATE_IDLE)
+        {
+            bool loopMode;
+            uint8_t hue;
+
+            if (validateSetLeds(
+                message,
+                loopMode,
+                hue
+            ))
+            {
+                settings.leds.loopMode = loopMode;
+                settings.leds.hue = hue;
+                settingsValidate();
+
+                loadCommandAck(id);
             }
         }
     }
@@ -201,23 +407,23 @@ void commandHandlerUpdate()
 
             if (stateResponse == STATE_WAIT_ENV_ACK)
             {
-                stateResponse = STATE_WAIT_CONTROL_ACK;
-                responseTime = millis();
+                loadCommandControl(id);
 
-                sendControl(id);
+                responseTime = millis();
+                stateResponse = STATE_WAIT_CONTROL_ACK;
             }
             else if (stateResponse == STATE_WAIT_CONTROL_ACK)
             {
-                stateResponse = STATE_WAIT_LIGHTS_ACK;
-                responseTime = millis();
+                loadCommandLeds(id);
 
-                sendLights(id);
+                responseTime = millis();
+                stateResponse = STATE_WAIT_LEDS_ACK;
             }
-            else if (stateResponse == STATE_WAIT_LIGHTS_ACK)
+            else if (stateResponse == STATE_WAIT_LEDS_ACK)
             {
-                stateResponse = STATE_IDLE;
                 stateId = 0;
                 responseTime = 0;
+                stateResponse = STATE_IDLE;
             }
 
             // --------------------------------------------------
@@ -226,23 +432,23 @@ void commandHandlerUpdate()
 
             else if (stateResponse == STATE_WAIT_SETTINGS_PUMP_ACK)
             {
-                stateResponse = STATE_WAIT_SETTINGS_WATERING_ACK;
-                responseTime = millis();
+                loadCommandSettingsWatering(id);
 
-                sendSettingsWatering(id);
+                responseTime = millis();
+                stateResponse = STATE_WAIT_SETTINGS_WATERING_ACK;
             }
             else if (stateResponse == STATE_WAIT_SETTINGS_WATERING_ACK)
             {
-                stateResponse = STATE_WAIT_SETTINGS_LIGHTS_ACK;
-                responseTime = millis();
+                loadCommandSettingsLeds(id);
 
-                sendSettingsLights(id);
+                responseTime = millis();
+                stateResponse = STATE_WAIT_SETTINGS_LEDS_ACK;
             }
-            else if (stateResponse == STATE_WAIT_SETTINGS_LIGHTS_ACK)
+            else if (stateResponse == STATE_WAIT_SETTINGS_LEDS_ACK)
             {
-                stateResponse = STATE_IDLE;
                 stateId = 0;
                 responseTime = 0;
+                stateResponse = STATE_IDLE;
             }
         }
     }
@@ -255,142 +461,20 @@ void commandHandlerUpdate()
     {
         // Ignore silently.
     }
-
-    commsClearMessage();
 }
 
 // --------------------------------------------------
-// GET_STATE: Environment
+// Reply
 // --------------------------------------------------
 
-void sendEnvironment(uint16_t id)
+void commandReply()
 {
-    JsonDocument document;
+    if (!commandHasReply())
+        return;
 
-    document["id"] = id;
-    document["cmd"] = "environment";
-    document["valid"] = environmentValid();
+    JsonDocument& reply = commandGetReply();
 
-    if (environmentValid())
-    {
-        document["temperature"] = environmentTemperature();
-        document["humidity"] = environmentHumidity();
-    }
+    commsSend(reply);
 
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// GET_STATE: Control
-// --------------------------------------------------
-
-void sendControl(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "control";
-
-    document["pump"] = pumpGetState() >= 2;
-    document["watering"] = wateringGetState() >= 2;
-    document["refill"] = refillGetState() >= 2;
-    document["empty"] = refillIsEmpty();
-    document["dayNight"] = getDayState() == DAY;
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// GET_STATE: Lights
-// --------------------------------------------------
-
-void sendLights(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "lights";
-
-    document["loop"] = ledStripIsLoop();
-
-    if (!ledStripIsLoop())
-    {
-        uint8_t hue;
-        uint8_t saturation;
-        uint8_t value;
-
-        getLedStripColor(hue, saturation, value);
-
-        document["H"] = hue;
-        document["S"] = saturation;
-        document["V"] = value;
-    }
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// GET_SETTINGS: Pump
-// --------------------------------------------------
-
-void sendSettingsPump(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "pump";
-
-    document["dayPeriod"] = settings.pump.dayPeriod;
-    document["dayRuntime"] = settings.pump.dayRunTime;
-    document["nightPeriod"] = settings.pump.nightPeriod;
-    document["nightRuntime"] = settings.pump.nightRunTime;
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// GET_SETTINGS: Watering
-// --------------------------------------------------
-
-void sendSettingsWatering(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "watering";
-
-    document["hour"] = settings.water.hour;
-    document["minute"] = settings.water.minute;
-    document["periodDays"] = settings.water.periodDays;
-    document["runtime"] = settings.water.runTime;
-
-    commsSendJson(document);
-}
-
-// --------------------------------------------------
-// GET_SETTINGS: Lights
-// --------------------------------------------------
-
-void sendSettingsLights(uint16_t id)
-{
-    JsonDocument document;
-
-    document["id"] = id;
-    document["cmd"] = "lights";
-
-    document["enabled"] = settings.led.enabled;
-    document["loop"] = settings.led.loopMode;
-    document["rate"] = settings.led.rate;
-
-    uint8_t hue;
-    uint8_t saturation;
-    uint8_t value;
-
-    getLedStripColor(hue, saturation, value);
-
-    document["H"] = hue;
-    document["S"] = saturation;
-    document["V"] = value;
-
-    commsSendJson(document);
+    commandClearReply();
 }

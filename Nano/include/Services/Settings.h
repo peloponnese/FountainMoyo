@@ -36,7 +36,7 @@ struct Settings
 {
     PumpSettings pump;
     WaterSettings water;
-    LedSettings led;
+    LedSettings leds;
 };
 
 extern Settings settings;

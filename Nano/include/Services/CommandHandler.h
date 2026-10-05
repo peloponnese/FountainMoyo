@@ -2,7 +2,7 @@
 #define COMMAND_HANDLER_H
 
 void commandHandlerBegin();
-
 void commandHandlerUpdate();
+void commandReply();
 
 #endif

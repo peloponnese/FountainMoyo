@@ -34,9 +34,9 @@ static void updateStripColor()
         leds,
         LED_COUNT,
         CHSV(
-            settings.led.loopMode ? loopHue : settings.led.hue,
-            settings.led.saturation,
-            settings.led.value));
+            settings.leds.loopMode ? loopHue : settings.leds.hue,
+            settings.leds.saturation,
+            settings.leds.value));
 
     FastLED.show();
 }
@@ -62,7 +62,7 @@ void ledStripUpdate()
     // DAY or disabled
     // --------------------------------------------------
 
-    if (getDayState() == DAY || !settings.led.enabled)
+    if (getDayState() == DAY || !settings.leds.enabled)
     {
         if (stripEnabled)
         {
@@ -88,16 +88,16 @@ void ledStripUpdate()
         FastLED.setBrightness(255);
 
         // Start LOOP from configured hue.
-        if (settings.led.loopMode)
-            loopHue = settings.led.hue;
+        if (settings.leds.loopMode)
+            loopHue = settings.leds.hue;
 
         updateStripColor();
         return;
     }
 
-    if (settings.led.loopMode)
+    if (settings.leds.loopMode)
     {
-        const uint16_t period = ledRateToPeriod(settings.led.rate);
+        const uint16_t period = ledRateToPeriod(settings.leds.rate);
         const unsigned long now = millis();
 
         if (now - previousMillis < period)
@@ -122,13 +122,13 @@ void getLedStripColor(
     uint8_t& outSaturation,
     uint8_t& outValue)
 {
-    if (settings.led.loopMode)
+    if (settings.leds.loopMode)
         outHue = loopHue;
     else
-        outHue = settings.led.hue;
+        outHue = settings.leds.hue;
 
-    outSaturation = settings.led.saturation;
-    outValue = settings.led.value;
+    outSaturation = settings.leds.saturation;
+    outValue = settings.leds.value;
 }
 
 // --------------------------------------------------
@@ -136,5 +136,5 @@ void getLedStripColor(
 // --------------------------------------------------
 bool ledStripIsLoop()
 {
-    return settings.led.loopMode;
+    return settings.leds.loopMode;
 }

@@ -9,4 +9,7 @@ void wateringUpdate();
 
 State wateringGetState();
 
+void wateringSetRunningExternal();
+void wateringSetOffExternal();
+
 #endif

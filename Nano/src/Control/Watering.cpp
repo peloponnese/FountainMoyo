@@ -50,11 +50,21 @@ State wateringGetState()
     return state;
 }
 
+void wateringSetRunningExternal()
+{
+    lastStartDay = dateTime.day;
+    runCounter = 0;
+
+    wateringSetState(RUNNING);
+}
+
+void wateringSetOffExternal()
+{
+    wateringSetState(OFF);
+}
+
 void wateringUpdate()
 {
-    if (!schedulerMinuteTick())
-        return;
-
     //--------------------------------------------------
     // Manual mode
     //--------------------------------------------------
@@ -80,6 +90,9 @@ void wateringUpdate()
     //--------------------------------------------------
     // Automatic cycle
     //--------------------------------------------------
+
+    if (!schedulerMinuteTick())
+        return;
 
     switch (state)
     {

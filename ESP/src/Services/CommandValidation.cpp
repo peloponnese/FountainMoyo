@@ -1,4 +1,4 @@
-#include "Services/NanoLinkValidation.h"
+#include "Services/CommandValidation.h"
 
 bool validateEnvironment(
     JsonDocument& message,
@@ -54,31 +54,19 @@ bool validateControl(
     return true;
 }
 
-bool validateLights(
+bool validateLeds(
     JsonDocument& message,
     bool& loop,
-    uint8_t& hue,
-    uint8_t& saturation,
-    uint8_t& value)
+    uint8_t& hue)
 {
-    if (!message["loop"].is<bool>())
-        return false;
-
-    loop = message["loop"].as<bool>();
-
-    if (loop)
-        return true;
-
-    if (!message["H"].is<int>() ||
-        !message["S"].is<int>() ||
-        !message["V"].is<int>())
+    if (!message["loop"].is<bool>() ||
+        !message["H"].is<int>())
     {
         return false;
     }
 
+    loop = message["loop"].as<bool>();
     hue = message["H"].as<int>();
-    saturation = message["S"].as<int>();
-    value = message["V"].as<int>();
 
     return true;
 }
@@ -129,7 +117,7 @@ bool validateWateringSettings(
     return true;
 }
 
-bool validateLightsSettings(
+bool validateLedsSettings(
     JsonDocument& message,
     bool& enabled,
     bool& loop,

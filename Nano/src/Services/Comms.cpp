@@ -12,8 +12,6 @@ static char rxBuffer[COMMS_BUFFER_SIZE];
 static uint16_t rxIndex;
 
 static bool messageReady;
-static uint16_t messageId;
-static char command[COMMS_COMMAND_SIZE];
 
 static JsonDocument messageDocument;
 
@@ -34,8 +32,6 @@ void commsBegin()
 
     rxIndex = 0;
     messageReady = false;
-    messageId = 0;
-    command[0] = '\0';
 
     clearBuffer();
 }
@@ -106,41 +102,13 @@ static void processMessage()
         return;
     }
 
-    // ID is mandatory
-    if (!messageDocument["id"].is<uint16_t>())
-    {
-        clearBuffer();
-        return;
-    }
-
-    messageId = messageDocument["id"].as<uint16_t>();
-
-    // Command is mandatory
-    if (!messageDocument["cmd"].is<const char*>())
-    {
-        clearBuffer();
-        return;
-    }
-
-    const char* receivedCommand = messageDocument["cmd"].as<const char*>();
-
-    strncpy(
-        command,
-        receivedCommand,
-        COMMS_COMMAND_SIZE - 1
-    );
-
-    command[COMMS_COMMAND_SIZE - 1] = '\0';
-
-    messageDocument.remove("crc");
-
     messageReady = true;
 
     clearBuffer();
 }
 
 // --------------------------------------------------
-// Clear receive buffer
+// Clear RX buffer
 // --------------------------------------------------
 static void clearBuffer()
 {
@@ -153,7 +121,6 @@ static void clearBuffer()
 // --------------------------------------------------
 void commsClearMessage()
 {
-    command[0] = '\0';
     messageDocument.clear();
     messageReady = false;
 }
@@ -167,69 +134,17 @@ bool commsHasMessage()
 }
 
 // --------------------------------------------------
-// Get command
+// Get message
 // --------------------------------------------------
-const char* commsGetCommand()
+JsonDocument& commsGetMessage()
 {
-    return command;
-}
-
-// --------------------------------------------------
-// Get ID
-// --------------------------------------------------
-uint16_t commsGetId()
-{
-    return messageId;
-}
-
-// --------------------------------------------------
-// Get integer
-// --------------------------------------------------
-bool commsGetInt(const char* key, int& value)
-{
-    if (!messageDocument[key].is<int>())
-        return false;
-
-    value = messageDocument[key].as<int>();
-
-    return true;
-}
-
-// --------------------------------------------------
-// Get byte
-// --------------------------------------------------
-bool commsGetByte(const char* key, byte& value)
-{
-    if (!messageDocument[key].is<int>())
-        return false;
-
-    int temp = messageDocument[key].as<int>();
-
-    if (temp < 0 || temp > 255)
-        return false;
-
-    value = (byte)temp;
-
-    return true;
-}
-
-// --------------------------------------------------
-// Get bool
-// --------------------------------------------------
-bool commsGetBool(const char* key, bool& value)
-{
-    if (!messageDocument[key].is<bool>())
-        return false;
-
-    value = messageDocument[key].as<bool>();
-
-    return true;
+    return messageDocument;
 }
 
 // --------------------------------------------------
 // Send JSON
 // --------------------------------------------------
-void commsSendJson(JsonDocument& document)
+void commsSend(JsonDocument& document)
 {
     Serial.print("NANO TX: ");
     serializeJson(document, Serial);

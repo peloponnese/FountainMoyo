@@ -58,4 +58,5 @@ void loop() {
 
     commsUpdate();
     commandHandlerUpdate();
+    commandReply();
 }

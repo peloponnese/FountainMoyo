@@ -49,11 +49,28 @@ State pumpGetState()
     return state;
 }
 
-void pumpUpdate()
+void pumpSetRunningExternal()
 {
-    if (!schedulerMinuteTick())
-        return;
+    periodCounter = 0;
+    runCounter = 0;
+
+    pumpSetState(RUNNING);
+}
+
+void pumpSetOffExternal()
+{
+    if (getDayState() == DAY)
+        periodCounter = settings.pump.dayRunTime;
+    else
+        periodCounter = settings.pump.nightRunTime;
     
+    runCounter = 0;
+
+    pumpSetState(OFF);
+}
+
+void pumpUpdate()
+{   
     //--------------------------------------------------
     // Manual mode
     //--------------------------------------------------
@@ -81,6 +98,11 @@ void pumpUpdate()
     //--------------------------------------------------
     // Automatic mode
     //--------------------------------------------------
+    
+    if (!schedulerMinuteTick())
+        return;
+
+    periodCounter++;
 
     uint16_t period;
     byte runTime;
@@ -99,8 +121,6 @@ void pumpUpdate()
     switch (state)
     {
         case OFF:
-
-            periodCounter++;
 
             if (periodCounter >= period)
             {

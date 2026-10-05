@@ -10,18 +10,10 @@ void commsUpdate();
 
 bool commsHasMessage();
 
-const char* commsGetCommand();
-
-uint16_t commsGetId();
-
-bool commsGetInt(const char* key, int& value);
-
-bool commsGetByte(const char* key, byte& value);
-
-bool commsGetBool(const char* key, bool& value);
+JsonDocument& commsGetMessage();
 
 void commsClearMessage();
 
-void commsSendJson(JsonDocument& document);
+void commsSend(JsonDocument& document);
 
 #endif

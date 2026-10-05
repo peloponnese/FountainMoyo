@@ -18,12 +18,12 @@ void settingsBegin()
     settings.water.periodDays = 2; // days
     settings.water.runTime = 10; // minutes
 
-    settings.led.enabled = true;
-    settings.led.loopMode = true;
-    settings.led.rate = 10;
-    settings.led.hue = 255;
-    settings.led.saturation = 255;
-    settings.led.value = 255;
+    settings.leds.enabled = true;
+    settings.leds.loopMode = true;
+    settings.leds.rate = 10;
+    settings.leds.hue = 255;
+    settings.leds.saturation = 255;
+    settings.leds.value = 255;
 
     settingsValidate();
 }
@@ -74,4 +74,24 @@ void settingsValidate()
         constrain(settings.water.runTime,
                   WATER_RUNTIME_MIN,
                   WATER_RUNTIME_MAX);
+
+    settings.leds.rate =
+        constrain(settings.leds.rate,
+                  LED_RATE_MIN_MS,
+                  LED_RATE_MAX_MS);
+    
+    settings.leds.hue =
+        constrain(settings.leds.hue,
+                  0,
+                  255);
+
+    settings.leds.saturation =
+        constrain(settings.leds.saturation,
+                  0,
+                  255);
+
+    settings.leds.value =
+        constrain(settings.leds.value,
+                  0,
+                  255);
 }

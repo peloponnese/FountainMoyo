@@ -12,8 +12,6 @@ bool commsHasMessage();
 
 JsonDocument& commsGetMessage();
 
-void commsSendAck(uint16_t id);
-
 void commsClearMessage();
 
 void commsSend(JsonDocument& document);

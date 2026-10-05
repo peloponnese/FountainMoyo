@@ -1,29 +1,8 @@
-#ifndef NANOLINKVALIDATION_H
-#define NANOLINKVALIDATION_H
+#ifndef COMMAND_VALIDATION_H
+#define COMMAND_VALIDATION_H
 
 #include <ArduinoJson.h>
 #include <stdint.h>
-
-bool validateEnvironment(
-    JsonDocument& message,
-    float& temperature,
-    float& humidity,
-    bool& valid);
-
-bool validateControl(
-    JsonDocument& message,
-    bool& pump,
-    bool& watering,
-    bool& refill,
-    bool& empty,
-    bool& dayNight);
-
-bool validateLights(
-    JsonDocument& message,
-    bool& loop,
-    uint8_t& hue,
-    uint8_t& saturation,
-    uint8_t& value);
 
 bool validatePumpSettings(
     JsonDocument& message,
@@ -39,7 +18,7 @@ bool validateWateringSettings(
     uint8_t& periodDays,
     uint8_t& runtime);
 
-bool validateLightsSettings(
+bool validateLedsSettings(
     JsonDocument& message,
     bool& enabled,
     bool& loop,
@@ -47,5 +26,18 @@ bool validateLightsSettings(
     uint8_t& hue,
     uint8_t& saturation,
     uint8_t& value);
+
+bool validateSetPump(
+    JsonDocument& message,
+    bool& manualOperation);
+
+bool validateSetWatering(
+    JsonDocument& message,
+    bool& manualOperation);
+
+bool validateSetLeds(
+    JsonDocument& message,
+    bool& loop,
+    uint8_t& hue);
 
 #endif

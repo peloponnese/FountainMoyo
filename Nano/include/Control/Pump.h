@@ -9,4 +9,7 @@ void pumpUpdate();
 
 State pumpGetState();
 
+void pumpSetRunningExternal();
+void pumpSetOffExternal();
+
 #endif
