@@ -53,8 +53,9 @@ static uint16_t nextId; // Next request ID to be generated. 0 is reserved and is
 static uint16_t stateId; // Current request ID for the active transaction. Readonly, used to match responses from the Nano.
 
 static unsigned long responseTime; // Time when the last request was sent. Used to detect transaction timeouts.
-static unsigned long lastStateRequest; // Time when the last GET_STATE request was sent. Used to trigger periodic requests.
-static unsigned long lastSettingsRequest; // Time when the last GET_SETTINGS request was sent. Used to trigger periodic requests.
+
+static unsigned long testPollingTime;
+static byte testPollingStep;
 
 // --------------------------------------------------
 // Internal functions
@@ -81,8 +82,8 @@ void commandHandlerBegin()
     stateId = 0;
 
     responseTime = 0;
-    lastStateRequest = millis();
-    lastSettingsRequest = millis();
+    testPollingTime = millis();
+    testPollingStep = 1;
 }
 
 // --------------------------------------------------
@@ -193,46 +194,49 @@ void commandHandlerUpdate()
     // Test only, will be triggered by web module.
     // --------------------------------------------------
 
-    if (now - lastSettingsRequest >= GET_SETTINGS_PERIOD_MS)
-    {
-        lastSettingsRequest = now;
-        request(REQUEST_GET_SETTINGS, 10);
-        return;
-    }
+    // --------------------------------------------------
+    // Test polling
+    // --------------------------------------------------
 
-    if (now - lastStateRequest >= GET_STATE_PERIOD_MS)
+    if (stateResponse == STATE_IDLE)
     {
-        lastStateRequest = now;
-        request(REQUEST_GET_STATE, 30);
-        return;
-    }
+        if (now - testPollingTime >= TEST_POLLING_PERIOD_MS)
+        {
+            testPollingTime = now;
 
-    if (now - lastStateRequest >= SET_SETTINGS_PERIOD_MS)
-    {
-        lastStateRequest = now;
-        request(REQUEST_SET_SETTINGS, 5);
-        return;
-    }
+            switch (testPollingStep)
+            {
+                case 1:
+                    request(REQUEST_GET_STATE, 10);
+                    testPollingStep = 2;
+                    break;
 
-    if (now - lastStateRequest >= SET_PUMP_PERIOD_MS)
-    {
-        lastStateRequest = now;
-        request(REQUEST_SET_PUMP, 4);
-        return;
-    }
+                case 2:
+                    request(REQUEST_GET_SETTINGS, 5);
+                    testPollingStep = 3;
+                    break;
 
-    if (now - lastStateRequest >= SET_WATERING_PERIOD_MS)
-    {
-        lastStateRequest = now;
-        request(REQUEST_SET_WATERING, 3);
-        return;
-    }
+                case 3:
+                    request(REQUEST_SET_SETTINGS, 4);
+                    testPollingStep = 4;
+                    break;
 
-    if (now - lastStateRequest >= SET_LEDS_PERIOD_MS)
-    {
-        lastStateRequest = now;
-        request(REQUEST_SET_LEDS, 2);
-        return;
+                case 4:
+                    request(REQUEST_SET_PUMP, 3);
+                    testPollingStep = 5;
+                    break;
+
+                case 5:
+                    request(REQUEST_SET_WATERING, 2);
+                    testPollingStep = 6;
+                    break;
+
+                case 6:
+                    request(REQUEST_SET_LEDS, 30);
+                    testPollingStep = 1;
+                    break;
+            }
+        }
     }
 }
 

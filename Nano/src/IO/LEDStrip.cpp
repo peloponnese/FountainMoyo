@@ -13,11 +13,14 @@ static uint8_t loopHue = 0;
 
 static bool stripEnabled = false;
 
+static bool outputPending = false;
+
 static unsigned long previousMillis = 0;
 
 // --------------------------------------------------
 // LED rate -> period
 // --------------------------------------------------
+
 static uint16_t ledRateToPeriod(uint8_t rate)
 {
     return LED_RATE_MAX_MS -
@@ -26,8 +29,9 @@ static uint16_t ledRateToPeriod(uint8_t rate)
 }
 
 // --------------------------------------------------
-// Update strip output
+// Prepare strip color
 // --------------------------------------------------
+
 static void updateStripColor()
 {
     fill_solid(
@@ -38,7 +42,7 @@ static void updateStripColor()
             settings.leds.saturation,
             settings.leds.value));
 
-    FastLED.show();
+    outputPending = true;
 }
 
 // --------------------------------------------------
@@ -51,11 +55,14 @@ void ledStripBegin()
 
     FastLED.clear();
     FastLED.show();
+
+    outputPending = false;
 }
 
 // --------------------------------------------------
 // Update
 // --------------------------------------------------
+
 void ledStripUpdate()
 {
     // --------------------------------------------------
@@ -67,9 +74,9 @@ void ledStripUpdate()
         if (stripEnabled)
         {
             FastLED.clear();
-            FastLED.show();
 
             stripEnabled = false;
+            outputPending = true;
         }
 
         return;
@@ -87,13 +94,17 @@ void ledStripUpdate()
 
         FastLED.setBrightness(255);
 
-        // Start LOOP from configured hue.
         if (settings.leds.loopMode)
             loopHue = settings.leds.hue;
 
         updateStripColor();
+
         return;
     }
+
+    // --------------------------------------------------
+    // Loop mode
+    // --------------------------------------------------
 
     if (settings.leds.loopMode)
     {
@@ -104,37 +115,39 @@ void ledStripUpdate()
             return;
 
         previousMillis = now;
+
         loopHue++;
 
         updateStripColor();
     }
-    else
-    {
-        updateStripColor();
-    }
+}
+
+// --------------------------------------------------
+// Output
+// --------------------------------------------------
+
+void ledStripOutput()
+{
+    if (!outputPending)
+        return;
+
+    FastLED.show();
+
+    outputPending = false;
 }
 
 // --------------------------------------------------
 // Get current color
 // --------------------------------------------------
-void getLedStripColor(
-    uint8_t& outHue,
-    uint8_t& outSaturation,
-    uint8_t& outValue)
+
+uint8_t getLedStripHue()
 {
+    uint8_t outHue = 0;
+
     if (settings.leds.loopMode)
         outHue = loopHue;
     else
         outHue = settings.leds.hue;
 
-    outSaturation = settings.leds.saturation;
-    outValue = settings.leds.value;
-}
-
-// --------------------------------------------------
-// Get mode
-// --------------------------------------------------
-bool ledStripIsLoop()
-{
-    return settings.leds.loopMode;
+    return outHue;
 }

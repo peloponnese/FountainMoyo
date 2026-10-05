@@ -54,9 +54,16 @@ void loop() {
     pumpUpdate();
     wateringUpdate();
     refillUpdate();
-    ledStripUpdate();
 
     commsUpdate();
     commandHandlerUpdate();
     commandReply();
+
+    ledStripUpdate();
+
+    if (commandHandlerIsIdle() &&
+        commsCanRunBlockingOperation())
+    {
+        ledStripOutput();
+    }
 }

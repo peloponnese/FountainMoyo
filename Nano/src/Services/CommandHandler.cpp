@@ -14,6 +14,7 @@
 #include "Services/CommandValidation.h"
 #include "Services/CommandLoader.h"
 #include "Services/Settings.h"
+#include "Services/EEPROMStorage.h"
 
 enum StateResponse
 {
@@ -477,4 +478,9 @@ void commandReply()
     commsSend(reply);
 
     commandClearReply();
+}
+
+bool commandHandlerIsIdle()
+{
+    return stateResponse == STATE_IDLE;
 }

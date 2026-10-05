@@ -74,20 +74,8 @@ void loadCommandLeds(uint16_t id)
 {
     prepareCommand(id, "leds");
 
-    document["loop"] = ledStripIsLoop();
-
-    if (!ledStripIsLoop())
-    {
-        uint8_t hue;
-        uint8_t saturation;
-        uint8_t value;
-
-        getLedStripColor(hue, saturation, value);
-
-        document["H"] = hue;
-        document["S"] = saturation;
-        document["V"] = value;
-    }
+    document["loop"] = settings.leds.loopMode;
+    document["H"] = getLedStripHue();
 }
 
 // --------------------------------------------------
@@ -129,16 +117,9 @@ void loadCommandSettingsLeds(uint16_t id)
     document["enabled"] = settings.leds.enabled;
     document["loop"] = settings.leds.loopMode;
     document["rate"] = settings.leds.rate;
-
-    uint8_t hue;
-    uint8_t saturation;
-    uint8_t value;
-
-    getLedStripColor(hue, saturation, value);
-
-    document["H"] = hue;
-    document["S"] = saturation;
-    document["V"] = value;
+    document["H"] = getLedStripHue();
+    document["S"] = settings.leds.saturation;
+    document["V"] = settings.leds.value;
 }
 
 // --------------------------------------------------

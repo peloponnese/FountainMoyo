@@ -80,12 +80,10 @@ bool validateSetPump(
     bool& manualOperation
 )
 {
-    if (!message["pump"].is<bool>())
-    {
+    if (!message["enabled"].is<bool>())
         return false;
-    }
 
-    manualOperation = message["pump"].is<bool>();
+    manualOperation = message["enabled"].as<bool>();
 
     return true;
 }
@@ -95,12 +93,10 @@ bool validateSetWatering(
     bool& manualOperation
 )
 {
-    if (!message["watering"].is<bool>())
-    {
+    if (!message["enabled"].is<bool>())
         return false;
-    }
 
-    manualOperation = message["watering"].is<bool>();
+    manualOperation = message["enabled"].as<bool>();
 
     return true;
 }
@@ -112,13 +108,13 @@ bool validateSetLeds(
 )
 {
     if (!message["loop"].is<bool>() ||
-        !message["H"].is<int>())
+        !message["hue"].is<int>())
     {
         return false;
     }
 
     loop = message["loop"].as<bool>();
-    hue = message["H"].as<int>();
+    hue = message["hue"].as<int>();
 
     return true;
 }

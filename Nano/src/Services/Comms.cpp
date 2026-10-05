@@ -15,6 +15,8 @@ static bool messageReady;
 
 static JsonDocument messageDocument;
 
+static unsigned long lastActivityMillis;
+
 // --------------------------------------------------
 // Internal functions
 // --------------------------------------------------
@@ -33,6 +35,8 @@ void commsBegin()
     rxIndex = 0;
     messageReady = false;
 
+    lastActivityMillis = millis();
+
     clearBuffer();
 }
 
@@ -44,20 +48,19 @@ void commsUpdate()
 {
     while (espSerial.available())
     {
+        lastActivityMillis = millis();
+
         char c = espSerial.read();
 
-        // End of message
         if (c == '\n')
         {
             processMessage();
             continue;
         }
 
-        // Ignore carriage return
         if (c == '\r')
             continue;
 
-        // Buffer overflow
         if (rxIndex >= COMMS_BUFFER_SIZE - 1)
         {
             clearBuffer();
@@ -82,15 +85,17 @@ static void processMessage()
         return;
     }
 
-    Serial.print("NANO RX: ");
-    Serial.println(rxBuffer);
-
     // Ignore ESP debug messages
     if (strncmp(rxBuffer, "ESP", 3) == 0)
     {
         clearBuffer();
         return;
     }
+
+    Serial.print("NANO RX (");
+    Serial.print(millis());
+    Serial.print("): ");
+    Serial.println(rxBuffer);
 
     messageDocument.clear();
 
@@ -146,10 +151,34 @@ JsonDocument& commsGetMessage()
 // --------------------------------------------------
 void commsSend(JsonDocument& document)
 {
-    Serial.print("NANO TX: ");
+    Serial.print("NANO TX (");
+    Serial.print(millis());
+    Serial.print("): ");
     serializeJson(document, Serial);
     Serial.println();
 
+    lastActivityMillis = millis();
+
     serializeJson(document, espSerial);
     espSerial.write('\n');
+
+    lastActivityMillis = millis();
+}
+
+
+bool commsCanRunBlockingOperation()
+{
+    if (messageReady)
+        return false;
+
+    if (rxIndex != 0)
+        return false;
+
+    if (espSerial.available())
+        return false;
+
+    if (millis() - lastActivityMillis < COMMS_LED_GUARD_MS)
+        return false;
+
+    return true;
 }

@@ -45,5 +45,6 @@ constexpr uint16_t COMMS_BUFFER_SIZE = 192;
 constexpr byte COMMS_COMMAND_SIZE = 32;
 constexpr uint16_t COMMS_CRC_INITIAL = 0xFFFF;
 constexpr uint16_t COMMS_TIMEOUT_MS = 2000;
+constexpr uint16_t COMMS_LED_GUARD_MS = 2;
 
 #endif

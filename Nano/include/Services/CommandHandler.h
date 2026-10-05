@@ -5,4 +5,6 @@ void commandHandlerBegin();
 void commandHandlerUpdate();
 void commandReply();
 
+bool commandHandlerIsIdle();
+
 #endif

@@ -74,8 +74,8 @@ static void processMessage()
         return;
     }
 
-    Serial.print("ESP RX: ");
-    Serial.println(rxBuffer);
+    // Serial.print("ESP RX: ");
+    // Serial.println(rxBuffer);
 
     messageDocument.clear();
 
@@ -83,8 +83,8 @@ static void processMessage()
 
     if (error)
     {
-        Serial.print("ESP JSON ERROR: ");
-        Serial.println(error.c_str());
+        // Serial.print("ESP JSON ERROR: ");
+        // Serial.println(error.c_str());
 
         clearBuffer();
         return;
